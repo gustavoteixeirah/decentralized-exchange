@@ -86,12 +86,12 @@ contract Dex {
         _;
     }
 
-    function createLimitOrder(
+    modifier isValidOrder(
         bytes32 _ticker,
         uint256 _amount,
         uint256 _price,
         Side _side
-    ) external tokenExist(_ticker) {
+    ) {
         require(_ticker != DAI, "Cannot trade DAI");
         if (_side == Side.SELL) {
             require(
@@ -104,6 +104,19 @@ contract Dex {
                 "DAI balance to low"
             );
         }
+        _;
+    }
+
+    function createLimitOrder(
+        bytes32 _ticker,
+        uint256 _amount,
+        uint256 _price,
+        Side _side
+    )
+        external
+        tokenExist(_ticker)
+        isValidOrder(_ticker, _amount, _price, _side)
+    {
         Order[] storage orders = orderBook[_ticker][uint256(_side)];
         orders.push(
             Order(
