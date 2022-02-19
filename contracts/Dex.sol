@@ -4,6 +4,17 @@ pragma solidity ^0.8.12;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract Dex {
+    event NewTrade(
+        uint256 _tradeId,
+        uint256 _orderId,
+        bytes32 indexed _ticker,
+        address indexed _trader1,
+        address indexed _trader2,
+        uint256 _amount,
+        uint256 _price,
+        uint256 _date
+    );
+
     enum Side {
         BUY,
         SELL
@@ -16,6 +27,7 @@ contract Dex {
 
     struct Order {
         uint256 id;
+        address trader;
         Side side;
         bytes32 ticker;
         uint256 amount;
@@ -33,6 +45,7 @@ contract Dex {
     address public admin;
 
     uint256 public nextOrderId;
+    uint256 public nextTradeId;
 
     bytes32 constant DAI = bytes32("DAI");
 
@@ -85,6 +98,10 @@ contract Dex {
         );
         _;
     }
+    modifier notDai(bytes32 _ticker) {
+        require(_ticker != DAI, "Cannot trade DAI");
+        _;
+    }
 
     modifier isValidOrder(
         bytes32 _ticker,
@@ -92,7 +109,6 @@ contract Dex {
         uint256 _price,
         Side _side
     ) {
-        require(_ticker != DAI, "Cannot trade DAI");
         if (_side == Side.SELL) {
             require(
                 traderBalances[msg.sender][_ticker] >= _amount,
@@ -115,12 +131,14 @@ contract Dex {
     )
         external
         tokenExist(_ticker)
+        notDai(_ticker)
         isValidOrder(_ticker, _amount, _price, _side)
     {
         Order[] storage orders = orderBook[_ticker][uint256(_side)];
         orders.push(
             Order(
                 nextOrderId,
+                msg.sender,
                 _side,
                 _ticker,
                 _amount,
@@ -143,5 +161,70 @@ contract Dex {
             i--;
         }
         nextOrderId++;
+    }
+
+    function createMarketOrder(
+        bytes32 _ticker,
+        uint256 _amount,
+        Side _side
+    ) external tokenExist(_ticker) notDai(_ticker) {
+        if (_side == Side.SELL) {
+            require(
+                traderBalances[msg.sender][_ticker] >= _amount,
+                "Balance too low."
+            );
+        }
+        Order[] storage orders = orderBook[_ticker][
+            uint256(_side == Side.BUY ? Side.SELL : Side.BUY)
+        ];
+        uint256 i;
+        uint256 remaining = _amount;
+        while (i < orders.length && remaining > 0) {
+            uint256 available = orders[i].amount - orders[i].filled;
+            uint256 matched = (remaining > available) ? available : remaining;
+            remaining -= matched;
+            orders[i].filled += matched;
+            emit NewTrade(
+                nextTradeId,
+                orders[i].id,
+                _ticker,
+                orders[i].trader,
+                msg.sender,
+                matched,
+                orders[i].price,
+                block.timestamp
+            );
+            if (_side == Side.SELL) {
+                traderBalances[msg.sender][_ticker] -= matched;
+                traderBalances[msg.sender][DAI] += matched * orders[i].price;
+                traderBalances[orders[i].trader][_ticker] += matched;
+                traderBalances[orders[i].trader][DAI] -=
+                    matched *
+                    orders[i].price;
+            }
+            if (_side == Side.BUY) {
+                require(
+                    traderBalances[msg.sender][DAI] >=
+                        matched * orders[i].price,
+                    "DAI balance too low"
+                );
+                traderBalances[msg.sender][_ticker] += matched;
+                traderBalances[msg.sender][DAI] -= matched * orders[i].price;
+                traderBalances[orders[i].trader][_ticker] -= matched;
+                traderBalances[orders[i].trader][DAI] +=
+                    matched *
+                    orders[i].price;
+            }
+            nextTradeId++;
+            i++;
+        }
+        i = 0;
+        while (i < orders.length && orders[i].filled == orders[i].amount) {
+            for (uint256 j = i; j < orders.length - 1; j++) {
+                orders[j] = orders[j + 1];
+            }
+            orders.pop();
+            i++;
+        }
     }
 }
