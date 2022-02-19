@@ -4,5 +4,8 @@
   "main": "index.js",
   "repository": "git@github.com:teixeirah-eth/decentralized-exchange.git",
   "author": "Gustavo Teixeira <contact@gustavoteixeira.dev>",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "@openzeppelin/contracts": "^4.5.0"
+  }
 }
