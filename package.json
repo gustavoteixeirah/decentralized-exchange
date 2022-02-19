@@ -1,0 +1,8 @@
+{
+  "name": "decentralized-exchange",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "git@github.com:teixeirah-eth/decentralized-exchange.git",
+  "author": "Gustavo Teixeira <contact@gustavoteixeira.dev>",
+  "license": "MIT"
+}
