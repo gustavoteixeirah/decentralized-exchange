@@ -2,8 +2,11 @@
 pragma solidity ^0.8.12;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
 contract Dex {
+    using SafeMath for uint256;
+
     event NewTrade(
         uint256 _tradeId,
         uint256 _orderId,
@@ -76,7 +79,9 @@ contract Dex {
             address(this),
             _amount
         );
-        traderBalances[msg.sender][_ticker] += _amount;
+        traderBalances[msg.sender][_ticker] = traderBalances[msg.sender][
+            _ticker
+        ].add(_amount);
     }
 
     function withdraw(uint256 _amount, bytes32 _ticker)
@@ -87,7 +92,9 @@ contract Dex {
             traderBalances[msg.sender][_ticker] >= _amount,
             "Balance too low."
         );
-        traderBalances[msg.sender][_ticker] -= _amount;
+        traderBalances[msg.sender][_ticker] = traderBalances[msg.sender][
+            _ticker
+        ].sub(_amount);
         IERC20(tokens[_ticker].tokenAddress).transfer(msg.sender, _amount);
     }
 
@@ -116,7 +123,7 @@ contract Dex {
             );
         } else {
             require(
-                traderBalances[msg.sender][DAI] >= _amount * _price,
+                traderBalances[msg.sender][DAI] >= _amount.mul(_price),
                 "DAI balance to low"
             );
         }
@@ -147,7 +154,7 @@ contract Dex {
                 block.timestamp
             )
         );
-        uint256 i = orders.length - 1;
+        uint256 i = orders.length > 0 ? orders.length - 1 : 0;
         while (i > 0) {
             if (_side == Side.BUY && orders[i - 1].price > orders[i].price) {
                 break;
@@ -158,9 +165,9 @@ contract Dex {
             Order memory tmp = orders[i - 1];
             orders[i - 1] = orders[i];
             orders[i] = tmp;
-            i--;
+            i = i.sub(1);
         }
-        nextOrderId++;
+        nextOrderId = nextOrderId.add(1);
     }
 
     function createMarketOrder(
@@ -180,10 +187,10 @@ contract Dex {
         uint256 i;
         uint256 remaining = _amount;
         while (i < orders.length && remaining > 0) {
-            uint256 available = orders[i].amount - orders[i].filled;
+            uint256 available = orders[i].amount.sub(orders[i].filled);
             uint256 matched = (remaining > available) ? available : remaining;
-            remaining -= matched;
-            orders[i].filled += matched;
+            remaining = remaining.sub(matched);
+            orders[i].filled = orders[i].filled.add(matched);
             emit NewTrade(
                 nextTradeId,
                 orders[i].id,
@@ -215,8 +222,8 @@ contract Dex {
                     matched *
                     orders[i].price;
             }
-            nextTradeId++;
-            i++;
+            nextTradeId = nextTradeId.add(1);
+            i = i.add(1);
         }
         i = 0;
         while (i < orders.length && orders[i].filled == orders[i].amount) {
@@ -224,7 +231,7 @@ contract Dex {
                 orders[j] = orders[j + 1];
             }
             orders.pop();
-            i++;
+            i = i.add(1);
         }
     }
 }
