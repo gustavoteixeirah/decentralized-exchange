@@ -234,4 +234,12 @@ contract Dex {
             i = i.add(1);
         }
     }
+
+    function getOrders(bytes32 ticker, Side side)
+        external
+        view
+        returns (Order[] memory)
+    {
+        return orderBook[ticker][uint256(side)];
+    }
 }

@@ -7,4 +7,8 @@ contract Dai is ERC20 {
     constructor(uint256 initialSupply) ERC20("DAI", "Dai Stablecoin") {
         _mint(msg.sender, initialSupply);
     }
+
+    function faucet(address to, uint amount) external {
+    _mint(to, amount);
+  }
 }

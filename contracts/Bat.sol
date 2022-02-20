@@ -7,4 +7,8 @@ contract Bat is ERC20 {
     constructor(uint256 initialSupply) ERC20("BAT", "Brave browser token") {
         _mint(msg.sender, initialSupply);
     }
+
+    function faucet(address to, uint amount) external {
+    _mint(to, amount);
+  }
 }

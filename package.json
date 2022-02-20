@@ -6,6 +6,7 @@
   "author": "Gustavo Teixeira <contact@gustavoteixeira.dev>",
   "license": "MIT",
   "dependencies": {
-    "@openzeppelin/contracts": "^4.5.0"
+    "@openzeppelin/contracts": "^4.5.0",
+    "@openzeppelin/test-helpers": "^0.5.15"
   }
 }
