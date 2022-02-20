@@ -92,4 +92,12 @@ contract("Dex", (accounts) => {
             "This token does not exist"
         );
     });
+
+    it("should NOT withdraw tokens if balance is too low", async () => {
+        await dex.deposit(web3.utils.toWei("100"), DAI, { from: trader1 });
+        await expectRevert(
+            dex.withdraw(web3.utils.toWei("1000"), DAI, { from: trader1 }),
+            "Balance too low"
+        );
+    });
 });
